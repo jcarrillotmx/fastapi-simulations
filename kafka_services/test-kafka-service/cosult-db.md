@@ -20,3 +20,8 @@ Nota: Cuando la base de datos se llene con los nombres reales hay que reemplzar 
   name_04, channel_04,
   name_05, channel_06,
   FROM fgenerador1_data ORDER BY id DESC LIMI1;
+
+  # query = "SHOW TABLES"
+
+        # query = "SELECT * FROM fgenerador1_data ORDER BY id DESC LIMIT 1"
+        # query = "SELECT name_1, channel_01, name_2, channel_02, name_3, channel_03, name_4, channel_04, name_5, channel_05 FROM fgenerador1_data ORDER BY id DESC LIMIT 1"
