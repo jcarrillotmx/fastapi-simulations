@@ -1,140 +1,140 @@
-from fastapi import APIRouter, HTTPException, status
-from config.db import connection
-from models.user import users
-from schemas.user import User, UserOut
+# from fastapi import APIRouter, HTTPException, status
+# from config.db import connection
+# from models.user import users
+# from schemas.user import User, UserOut
 
-from cryptography.fernet import Fernet
+# from cryptography.fernet import Fernet
 
-# Encriptar contraseña
-key = Fernet.generate_key()
-key_to_hash = Fernet(key)
+# # Encriptar contraseña
+# key = Fernet.generate_key()
+# key_to_hash = Fernet(key)
 
-user = APIRouter()
-
-
-# Obtener todos los usuarios
-@user.get("/users", response_model=list[UserOut])
-def get_users():
-    return connection.execute(users.select()).fetchall()
+# user = APIRouter()
 
 
-# Obtener un usuario por id
-@user.get("/users/{user_id}", response_model=UserOut)
-def get_user_by_id(user_id: int):
-    # Buscamos al usuario
-    result = connection.execute(
-        users.select().where(users.c.id == user_id)
-    ).fetchone()
-
-    # Verificiamos que el usuario exista (en caso de que no exista devolvermos una excepcion)
-    if result is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Si el usuario si existe devolvemos su informacion
-    return {
-        "id": result.id,
-        "name": result.name,
-        "email": result.email,
-        # Omitir la contraseña por seguridad
-    }
+# # Obtener todos los usuarios
+# @user.get("/users", response_model=list[UserOut])
+# def get_users():
+#     return connection.execute(users.select()).fetchall()
 
 
-# Registrar un usuario
-@user.post("/users", response_model=User)
-def create_user(user: User):
-    # user.password.encode(): Convierte la contraseña (un str) en bytes, necesario para encriptarla.
-    # key_to_hash.encrypt(...): Usa Fernet (de la librería cryptography) para encriptar la contraseña.
-    # .decode(): Convierte el resultado de la encriptación (que está en bytes) de vuelta a str para poder guardarlo en la base de datos.
-    encrypted_password = key_to_hash.encrypt(user.password.encode()).decode()
+# # Obtener un usuario por id
+# @user.get("/users/{user_id}", response_model=UserOut)
+# def get_user_by_id(user_id: int):
+#     # Buscamos al usuario
+#     result = connection.execute(
+#         users.select().where(users.c.id == user_id)
+#     ).fetchone()
 
-    # users.insert(): Es una instrucción SQLAlchemy que genera una sentencia SQL INSERT INTO users (...) VALUES (...).
-    # .values(): Especifica los valores que se van a insertar en las columnas name, email y password
-    # connection.execute(): Ejecuta esa sentencia SQL directamente sobre la base de datos.
-    result = connection.execute(
-        users.insert().values(
-            name=user.name,
-            email=user.email,
-            password=encrypted_password
-        )
-    )
+#     # Verificiamos que el usuario exista (en caso de que no exista devolvermos una excepcion)
+#     if result is None:
+#         raise HTTPException(status_code=404, detail="User not found")
 
-    # Confirma (guarda) los cambios realizados por la instrucción SQL anterior en la base de datos.
-    connection.commit()
-
-    # Obtener el id del usuario insertado
-    user_id = result.lastrowid
-
-    # Recuperar el usuario insertado
-    created_user = connection.execute(
-        users.select().where(users.c.id == user_id)
-    ).fetchone()
-
-    # Devuelve una respuesta JSON al cliente (por ejemplo, Postman o una app frontend).
-    return {
-        "id": created_user.id,
-        "name": created_user.name,
-        "email": created_user.email,
-        "password": created_user.password
-    }
+#     # Si el usuario si existe devolvemos su informacion
+#     return {
+#         "id": result.id,
+#         "name": result.name,
+#         "email": result.email,
+#         # Omitir la contraseña por seguridad
+#     }
 
 
-# Actualizar un usuario
-@user.put("/users/{user_id}", response_model=UserOut)
-def update_user(user_id: int, updated_user: User):
-    # Verificar que el usuario exista
-    existing_user = connection.execute(
-        users.select().where(users.c.id == user_id)
-    ).fetchone()
+# # Registrar un usuario
+# @user.post("/users", response_model=User)
+# def create_user(user: User):
+#     # user.password.encode(): Convierte la contraseña (un str) en bytes, necesario para encriptarla.
+#     # key_to_hash.encrypt(...): Usa Fernet (de la librería cryptography) para encriptar la contraseña.
+#     # .decode(): Convierte el resultado de la encriptación (que está en bytes) de vuelta a str para poder guardarlo en la base de datos.
+#     encrypted_password = key_to_hash.encrypt(user.password.encode()).decode()
 
-    if existing_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+#     # users.insert(): Es una instrucción SQLAlchemy que genera una sentencia SQL INSERT INTO users (...) VALUES (...).
+#     # .values(): Especifica los valores que se van a insertar en las columnas name, email y password
+#     # connection.execute(): Ejecuta esa sentencia SQL directamente sobre la base de datos.
+#     result = connection.execute(
+#         users.insert().values(
+#             name=user.name,
+#             email=user.email,
+#             password=encrypted_password
+#         )
+#     )
 
-    # Encriptar la nueva contraseña
-    encrypted_password = key_to_hash.encrypt(
-        updated_user.password.encode()).decode()
+#     # Confirma (guarda) los cambios realizados por la instrucción SQL anterior en la base de datos.
+#     connection.commit()
 
-    # Ejecutar actualización
-    connection.execute(
-        users.update()
-        .where(users.c.id == user_id)
-        .values(
-            name=updated_user.name,
-            email=updated_user.email,
-            password=encrypted_password
-        )
-    )
+#     # Obtener el id del usuario insertado
+#     user_id = result.lastrowid
 
-    connection.commit()
+#     # Recuperar el usuario insertado
+#     created_user = connection.execute(
+#         users.select().where(users.c.id == user_id)
+#     ).fetchone()
 
-    return {
-        "message": "User updated",
-        "id": user_id,
-        "name": updated_user.name,
-        "email": updated_user.email,
-    }
+#     # Devuelve una respuesta JSON al cliente (por ejemplo, Postman o una app frontend).
+#     return {
+#         "id": created_user.id,
+#         "name": created_user.name,
+#         "email": created_user.email,
+#         "password": created_user.password
+#     }
 
 
-# Eliminar un usuario
-@user.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int):
-    # Buscar usuario
-    result = connection.execute(
-        users.select().where(users.c.id == user_id)
-    ).fetchone()
+# # Actualizar un usuario
+# @user.put("/users/{user_id}", response_model=UserOut)
+# def update_user(user_id: int, updated_user: User):
+#     # Verificar que el usuario exista
+#     existing_user = connection.execute(
+#         users.select().where(users.c.id == user_id)
+#     ).fetchone()
 
-    if result is None:
-        raise HTTPException(status_code=404, detail="User not found")
+#     if existing_user is None:
+#         raise HTTPException(status_code=404, detail="User not found")
 
-    # Eliminar usuario
-    connection.execute(
-        users.delete().where(users.c.id == user_id)
-    )
+#     # Encriptar la nueva contraseña
+#     encrypted_password = key_to_hash.encrypt(
+#         updated_user.password.encode()).decode()
 
-    connection.commit()
+#     # Ejecutar actualización
+#     connection.execute(
+#         users.update()
+#         .where(users.c.id == user_id)
+#         .values(
+#             name=updated_user.name,
+#             email=updated_user.email,
+#             password=encrypted_password
+#         )
+#     )
 
-    # Devolver los datos eliminados
-    return {
-        "id": result.id,
-        "name": result.name,
-        "email": result.email,
-    }
+#     connection.commit()
+
+#     return {
+#         "message": "User updated",
+#         "id": user_id,
+#         "name": updated_user.name,
+#         "email": updated_user.email,
+#     }
+
+
+# # Eliminar un usuario
+# @user.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+# def delete_user(user_id: int):
+#     # Buscar usuario
+#     result = connection.execute(
+#         users.select().where(users.c.id == user_id)
+#     ).fetchone()
+
+#     if result is None:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     # Eliminar usuario
+#     connection.execute(
+#         users.delete().where(users.c.id == user_id)
+#     )
+
+#     connection.commit()
+
+#     # Devolver los datos eliminados
+#     return {
+#         "id": result.id,
+#         "name": result.name,
+#         "email": result.email,
+#     }

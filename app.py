@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes.user import user
+# from routes.user import user
 from routes.simulation import simulation
 from routes.notifications import notification
 from routes.alan import alan
 from routes.kafka import kafka
+from strawberry.fastapi import GraphQLRouter
+from graphql_config.schema import schema
 
 # Crear un servidor basico
 app = FastAPI()
@@ -27,12 +29,17 @@ async def log_request(request: Request, call_next):
     response = await call_next(request)
     return response
 
+
+# Integrar GraphQl en main.py
+graphql_app = GraphQLRouter(schema)
+
 # Llamar las rutas definidas en otra carpeta
-app.include_router(user)
+# app.include_router(user)
 app.include_router(simulation)
 app.include_router(notification)
 app.include_router(alan)
 app.include_router(kafka)
+app.include_router(graphql_app, prefix="/graphql")
 
 # 🔓 Middleware para habilitar CORS
 app.add_middleware(

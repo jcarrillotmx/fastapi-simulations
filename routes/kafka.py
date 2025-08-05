@@ -28,18 +28,6 @@ def kafka_listener():
 
     print('Escuchando datos de Kafka...')
 
-    # try:
-    #     # Ciclo para extraer los datos del consumer
-    #     for message in consumer:
-    #         # Guardamos los datos en una variable
-    #         data = message.value
-    #         print(f"Mensaje recibido: {data}")
-    #         # AQUÍ GUARDAMOS LA DATA
-    #         latest_kafka_data = data
-    #         time.sleep(3)
-    # except Exception as e:
-    #     print(f"Error: {e}")
-
     try:
         while True:
             start_time = time.time()
@@ -58,6 +46,8 @@ def kafka_listener():
                             data_batch[table] = data
                             print(
                                 f"[Kafka] Recibido desde {table}: {data}", flush=True)
+                            print(
+                                f"[Kafka] Recibido desde {table}", flush=True)
 
             # Guardar el batch como última versión global
             if data_batch:
